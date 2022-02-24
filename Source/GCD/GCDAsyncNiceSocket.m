@@ -336,13 +336,13 @@ enum GCDAsyncNiceSocketConfig
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * The GCDAsyncReadPacket encompasses the instructions for any given read.
+ * The GCDAsyncReadNicePacket encompasses the instructions for any given read.
  * The content of a read packet allows the code to determine if we're:
  *  - reading to a certain length
  *  - reading to a certain separator
  *  - or simply reading the first chunk of available data
 **/
-@interface GCDAsyncReadPacket : NSObject
+@interface GCDAsyncReadNicePacket : NSObject
 {
   @public
 	NSMutableData *buffer;
@@ -376,7 +376,7 @@ enum GCDAsyncNiceSocketConfig
 
 @end
 
-@implementation GCDAsyncReadPacket
+@implementation GCDAsyncReadNicePacket
 
 // Cover the superclass' designated initializer
 - (instancetype)init NS_UNAVAILABLE
@@ -812,9 +812,9 @@ enum GCDAsyncNiceSocketConfig
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * The GCDAsyncWritePacket encompasses the instructions for any given write.
+ * The GCDAsyncWriteNicePacket encompasses the instructions for any given write.
 **/
-@interface GCDAsyncWritePacket : NSObject
+@interface GCDAsyncWriteNicePacket : NSObject
 {
   @public
 	NSData *buffer;
@@ -825,7 +825,7 @@ enum GCDAsyncNiceSocketConfig
 - (instancetype)initWithData:(NSData *)d timeout:(NSTimeInterval)t tag:(long)i NS_DESIGNATED_INITIALIZER;
 @end
 
-@implementation GCDAsyncWritePacket
+@implementation GCDAsyncWriteNicePacket
 
 // Cover the superclass' designated initializer
 - (instancetype)init NS_UNAVAILABLE
@@ -854,10 +854,10 @@ enum GCDAsyncNiceSocketConfig
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * The GCDAsyncSpecialPacket encompasses special instructions for interruptions in the read/write queues.
+ * The GCDAsyncNiceSpecialPacket encompasses special instructions for interruptions in the read/write queues.
  * This class my be altered to support more than just TLS in the future.
 **/
-@interface GCDAsyncSpecialPacket : NSObject
+@interface GCDAsyncNiceSpecialPacket : NSObject
 {
   @public
 	NSDictionary *tlsSettings;
@@ -865,7 +865,7 @@ enum GCDAsyncNiceSocketConfig
 - (instancetype)initWithTLSSettings:(NSDictionary <NSString*,NSObject*>*)settings NS_DESIGNATED_INITIALIZER;
 @end
 
-@implementation GCDAsyncSpecialPacket
+@implementation GCDAsyncNiceSpecialPacket
 
 // Cover the superclass' designated initializer
 - (instancetype)init NS_UNAVAILABLE
@@ -921,8 +921,8 @@ enum GCDAsyncNiceSocketConfig
 	NSMutableArray *readQueue;
 	NSMutableArray *writeQueue;
 	
-	GCDAsyncReadPacket *currentRead;
-	GCDAsyncWritePacket *currentWrite;
+	GCDAsyncReadNicePacket *currentRead;
+	GCDAsyncWriteNicePacket *currentWrite;
 	
 	unsigned long socketFDBytesAvailable;
 	
@@ -4463,7 +4463,7 @@ enum GCDAsyncNiceSocketConfig
 		return;
 	}
 	
-	GCDAsyncReadPacket *packet = [[GCDAsyncReadPacket alloc] initWithData:buffer
+	GCDAsyncReadNicePacket *packet = [[GCDAsyncReadNicePacket alloc] initWithData:buffer
 	                                                          startOffset:offset
 	                                                            maxLength:length
 	                                                              timeout:timeout
@@ -4506,7 +4506,7 @@ enum GCDAsyncNiceSocketConfig
 		return;
 	}
 	
-	GCDAsyncReadPacket *packet = [[GCDAsyncReadPacket alloc] initWithData:buffer
+	GCDAsyncReadNicePacket *packet = [[GCDAsyncReadNicePacket alloc] initWithData:buffer
 	                                                          startOffset:offset
 	                                                            maxLength:0
 	                                                              timeout:timeout
@@ -4568,7 +4568,7 @@ enum GCDAsyncNiceSocketConfig
 		return;
 	}
 	
-	GCDAsyncReadPacket *packet = [[GCDAsyncReadPacket alloc] initWithData:buffer
+	GCDAsyncReadNicePacket *packet = [[GCDAsyncReadNicePacket alloc] initWithData:buffer
 	                                                          startOffset:offset
 	                                                            maxLength:maxLength
 	                                                              timeout:timeout
@@ -4597,7 +4597,7 @@ enum GCDAsyncNiceSocketConfig
 	
 	dispatch_block_t block = ^{
 		
-        if (!self->currentRead || ![self->currentRead isKindOfClass:[GCDAsyncReadPacket class]])
+        if (!self->currentRead || ![self->currentRead isKindOfClass:[GCDAsyncReadNicePacket class]])
 		{
 			// We're not reading anything right now.
 			
@@ -4660,9 +4660,9 @@ enum GCDAsyncNiceSocketConfig
 			[readQueue removeObjectAtIndex:0];
 			
 			
-			if ([currentRead isKindOfClass:[GCDAsyncSpecialPacket class]])
+			if ([currentRead isKindOfClass:[GCDAsyncNiceSpecialPacket class]])
 			{
-				LogVerbose(@"Dequeued GCDAsyncSpecialPacket");
+				LogVerbose(@"Dequeued GCDAsyncNiceSpecialPacket");
 				
 				// Attempt to start TLS
 				flags |= kStartingReadTLS;
@@ -4672,7 +4672,7 @@ enum GCDAsyncNiceSocketConfig
 			}
 			else
 			{
-				LogVerbose(@"Dequeued GCDAsyncReadPacket");
+				LogVerbose(@"Dequeued GCDAsyncReadNicePacket");
 				
 				// Setup read timer (if needed)
 				[self setupReadTimerWithTimeout:currentRead->timeout];
@@ -5760,7 +5760,7 @@ enum GCDAsyncNiceSocketConfig
 
 	if (delegateQueue && [theDelegate respondsToSelector:@selector(socket:didReadData:withTag:)])
 	{
-		GCDAsyncReadPacket *theRead = currentRead; // Ensure currentRead retained since result may not own buffer
+		GCDAsyncReadNicePacket *theRead = currentRead; // Ensure currentRead retained since result may not own buffer
 		
 		dispatch_async(delegateQueue, ^{ @autoreleasepool {
 			
@@ -5835,7 +5835,7 @@ enum GCDAsyncNiceSocketConfig
 
 	if (delegateQueue && [theDelegate respondsToSelector:@selector(socket:shouldTimeoutReadWithTag:elapsed:bytesDone:)])
 	{
-		GCDAsyncReadPacket *theRead = currentRead;
+		GCDAsyncReadNicePacket *theRead = currentRead;
 		
 		dispatch_async(delegateQueue, ^{ @autoreleasepool {
 			
@@ -5890,7 +5890,7 @@ enum GCDAsyncNiceSocketConfig
 {
 	if ([data length] == 0) return;
 	
-	GCDAsyncWritePacket *packet = [[GCDAsyncWritePacket alloc] initWithData:data timeout:timeout tag:tag];
+	GCDAsyncWriteNicePacket *packet = [[GCDAsyncWriteNicePacket alloc] initWithData:data timeout:timeout tag:tag];
 	
 	dispatch_async(socketQueue, ^{ @autoreleasepool {
 		
@@ -5913,7 +5913,7 @@ enum GCDAsyncNiceSocketConfig
 	
 	dispatch_block_t block = ^{
 		
-        if (!self->currentWrite || ![self->currentWrite isKindOfClass:[GCDAsyncWritePacket class]])
+        if (!self->currentWrite || ![self->currentWrite isKindOfClass:[GCDAsyncWriteNicePacket class]])
 		{
 			// We're not writing anything right now.
 			
@@ -5970,9 +5970,9 @@ enum GCDAsyncNiceSocketConfig
 			[writeQueue removeObjectAtIndex:0];
 			
 			
-			if ([currentWrite isKindOfClass:[GCDAsyncSpecialPacket class]])
+			if ([currentWrite isKindOfClass:[GCDAsyncNiceSpecialPacket class]])
 			{
-				LogVerbose(@"Dequeued GCDAsyncSpecialPacket");
+				LogVerbose(@"Dequeued GCDAsyncNiceSpecialPacket");
 				
 				// Attempt to start TLS
 				flags |= kStartingWriteTLS;
@@ -5982,7 +5982,7 @@ enum GCDAsyncNiceSocketConfig
 			}
 			else
 			{
-				LogVerbose(@"Dequeued GCDAsyncWritePacket");
+				LogVerbose(@"Dequeued GCDAsyncWriteNicePacket");
 				
 				// Setup write timer (if needed)
 				[self setupWriteTimerWithTimeout:currentWrite->timeout];
@@ -6086,7 +6086,7 @@ enum GCDAsyncNiceSocketConfig
 		return;
 	}
 	
-	// Note: This method is not called if currentWrite is a GCDAsyncSpecialPacket (startTLS packet)
+	// Note: This method is not called if currentWrite is a GCDAsyncNiceSpecialPacket (startTLS packet)
 	
 	BOOL waiting = NO;
 	NSError *error = nil;
@@ -6478,7 +6478,7 @@ enum GCDAsyncNiceSocketConfig
 
 	if (delegateQueue && [theDelegate respondsToSelector:@selector(socket:shouldTimeoutWriteWithTag:elapsed:bytesDone:)])
 	{
-		GCDAsyncWritePacket *theWrite = currentWrite;
+		GCDAsyncWriteNicePacket *theWrite = currentWrite;
 		
 		dispatch_async(delegateQueue, ^{ @autoreleasepool {
 			
@@ -6546,7 +6546,7 @@ enum GCDAsyncNiceSocketConfig
         tlsSettings = [NSDictionary dictionary];
     }
 	
-	GCDAsyncSpecialPacket *packet = [[GCDAsyncSpecialPacket alloc] initWithTLSSettings:tlsSettings];
+	GCDAsyncNiceSpecialPacket *packet = [[GCDAsyncNiceSpecialPacket alloc] initWithTLSSettings:tlsSettings];
 	
 	dispatch_async(socketQueue, ^{ @autoreleasepool {
 		
@@ -6578,7 +6578,7 @@ enum GCDAsyncNiceSocketConfig
 		
 		#if TARGET_OS_IPHONE
 		{
-			GCDAsyncSpecialPacket *tlsPacket = (GCDAsyncSpecialPacket *)currentRead;
+			GCDAsyncNiceSpecialPacket *tlsPacket = (GCDAsyncNiceSpecialPacket *)currentRead;
             NSDictionary *tlsSettings = @{};
             if (tlsPacket) {
                 tlsSettings = tlsPacket->tlsSettings;
@@ -6851,7 +6851,7 @@ static OSStatus SSLWriteFunction(SSLConnectionRef connection, const void *data, 
 	
 	OSStatus status;
 	
-	GCDAsyncSpecialPacket *tlsPacket = (GCDAsyncSpecialPacket *)currentRead;
+	GCDAsyncNiceSpecialPacket *tlsPacket = (GCDAsyncNiceSpecialPacket *)currentRead;
 	if (tlsPacket == nil) // Code to quiet the analyzer
 	{
 		NSAssert(NO, @"Logic error");
@@ -7545,10 +7545,10 @@ static OSStatus SSLWriteFunction(SSLConnectionRef connection, const void *data, 
 		return;
 	}
 	
-	NSAssert([currentRead isKindOfClass:[GCDAsyncSpecialPacket class]], @"Invalid read packet for startTLS");
-	NSAssert([currentWrite isKindOfClass:[GCDAsyncSpecialPacket class]], @"Invalid write packet for startTLS");
+	NSAssert([currentRead isKindOfClass:[GCDAsyncNiceSpecialPacket class]], @"Invalid read packet for startTLS");
+	NSAssert([currentWrite isKindOfClass:[GCDAsyncNiceSpecialPacket class]], @"Invalid write packet for startTLS");
 	
-	GCDAsyncSpecialPacket *tlsPacket = (GCDAsyncSpecialPacket *)currentRead;
+	GCDAsyncNiceSpecialPacket *tlsPacket = (GCDAsyncNiceSpecialPacket *)currentRead;
 	CFDictionaryRef tlsSettings = (__bridge CFDictionaryRef)tlsPacket->tlsSettings;
 	
 	// Getting an error concerning kCFStreamPropertySSLSettings ?
